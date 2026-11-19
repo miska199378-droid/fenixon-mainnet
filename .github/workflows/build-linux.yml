@@ -1,0 +1,27 @@
+name: Build Linux Binaries
+on: [workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps & compile
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev unzip
+          cd FENIXON_Public_Release
+          unzip -q fenixon-source.zip
+          cmake -B build -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF
+          cmake --build build -j$(nproc)
+          cp build/bin/bitcoind fenixond-linux
+          cp build/bin/bitcoin-cli fenixon-cli-linux
+          rm -rf build src cmake CMakeLists.txt CMakePresets.json
+      - name: Push binaries
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add FENIXON_Public_Release/fenixond-linux FENIXON_Public_Release/fenixon-cli-linux
+          git commit -m "Add official Linux mainnet binaries"
+          git push
