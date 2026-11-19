@@ -1,29 +1,81 @@
-name: Build Linux Binaries
+name: Build Linux & Windows Releases
 on: [workflow_dispatch]
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Install deps & compile
+      - name: Compile Linux x64
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev libssl-dev unzip
+          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev libssl-dev unzip zip
           cd FENIXON_Public_Release
           unzip -o -q fenixon-source.zip
           cmake -B build -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
           cmake --build build -j$(nproc)
-          cp build/bin/bitcoind fenixond-linux
-          cp build/bin/bitcoin-cli fenixon-cli-linux
-          rm -rf build src cmake CMakeLists.txt CMakePresets.json
-      - name: Push binaries
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add FENIXON_Public_Release/fenixond-linux FENIXON_Public_Release/fenixon-cli-linux
-          git commit -m "Add official Linux mainnet binaries"
-          git pull --rebase
-          git push
+          mkdir -p linux64
+          cp build/bin/bitcoind linux64/fenixond
+          cp build/bin/bitcoin-cli linux64/fenixon-cli
+          cp fenixon.conf linux64/fenixon.conf
+          cd linux64 && zip -r ../FENIXON-Linux-x64.zip . && cd ..
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FENIXON-Linux-x64
+          path: FENIXON_Public_Release/FENIXON-Linux-x64.zip
 
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-boost
+            mingw-w64-x86_64-libevent
+            mingw-w64-x86_64-sqlite3
+            unzip
+            zip
+      - name: Compile Windows x64
+        run: |
+          cd FENIXON_Public_Release
+          unzip -o -q fenixon-source.zip
+          cmake -B build -G Ninja -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
+          cmake --build build -j$(nproc)
+          mkdir -p win64
+          cp build/bin/bitcoind.exe win64/fenixond.exe
+          cp build/bin/bitcoin-cli.exe win64/fenixon-cli.exe
+          cp fenixon.conf win64/fenixon.conf
+          ldd win64/fenixond.exe | grep '/mingw64/bin/' | awk '{print $3}' | xargs -I '{}' cp -v '{}' win64/
+          cd win64 && zip -r ../FENIXON-Windows-x64.zip . && cd ..
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FENIXON-Windows-x64
+          path: FENIXON_Public_Release/FENIXON-Windows-x64.zip
+
+  publish-release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create Official GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0-mainnet
+          name: "FENIXON (FNX) Mainnet v1.0.0 (Linux & Windows)"
+          files: |
+            artifacts/FENIXON-Linux-x64/FENIXON-Linux-x64.zip
+            artifacts/FENIXON-Windows-x64/FENIXON-Windows-x64.zip
