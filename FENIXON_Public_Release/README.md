@@ -1,0 +1,4 @@
+# FENIXON (FNX)
+- Supply: 50,000,000 FNX
+- Reward: 10 FNX
+- Seed: 94.176.79.107:9333
