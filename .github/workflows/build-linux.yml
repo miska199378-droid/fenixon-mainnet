@@ -11,10 +11,10 @@ jobs:
       - name: Compile Linux x64
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev libssl-dev unzip zip
+          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev libssl-dev libzmq3-dev unzip zip
           cd FENIXON_Public_Release
           unzip -o -q fenixon-source.zip
-          cmake -B build -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF -DENABLE_IPC=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
+          cmake -B build -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DENABLE_IPC=OFF -DWITH_ZMQ=OFF -DENABLE_EXTERNAL_SIGNER=OFF -DWITH_EMBEDDED_ASMAP=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
           cmake --build build -j$(nproc)
           mkdir -p linux64
           cp build/bin/bitcoind linux64/fenixond
@@ -51,7 +51,7 @@ jobs:
         run: |
           cd FENIXON_Public_Release
           unzip -o -q fenixon-source.zip
-          cmake -B build -G Ninja -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF -DENABLE_IPC=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
+          cmake -B build -G Ninja -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DENABLE_IPC=OFF -DWITH_ZMQ=OFF -DENABLE_EXTERNAL_SIGNER=OFF -DWITH_EMBEDDED_ASMAP=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
           cmake --build build -j$(nproc)
           mkdir -p win64
           cp build/bin/bitcoind.exe win64/fenixond.exe
