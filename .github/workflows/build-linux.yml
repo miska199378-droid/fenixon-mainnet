@@ -2,7 +2,7 @@ name: Build Linux Binaries
 on: [workflow_dispatch]
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -10,10 +10,10 @@ jobs:
       - name: Install deps & compile
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev unzip
+          sudo apt-get install -y build-essential cmake pkg-config libevent-dev libboost-dev libsqlite3-dev libssl-dev unzip
           cd FENIXON_Public_Release
-          unzip -q fenixon-source.zip
-          cmake -B build -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF
+          unzip -o -q fenixon-source.zip
+          cmake -B build -DBUILD_GUI=OFF -DENABLE_WALLET=ON -DWITH_ZMQ=OFF -DBUILD_TESTS=OFF -DBUILD_BENCH=OFF
           cmake --build build -j$(nproc)
           cp build/bin/bitcoind fenixond-linux
           cp build/bin/bitcoin-cli fenixon-cli-linux
@@ -24,4 +24,6 @@ jobs:
           git config user.email "actions@github.com"
           git add FENIXON_Public_Release/fenixond-linux FENIXON_Public_Release/fenixon-cli-linux
           git commit -m "Add official Linux mainnet binaries"
+          git pull --rebase
           git push
+
